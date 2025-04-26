@@ -48,6 +48,9 @@
         "type_traits": "cpp",
         "utility": "cpp",
         "typeindex": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "mutex": "cpp",
+        "condition_variable": "cpp",
+        "system_error": "cpp"
     }
 }

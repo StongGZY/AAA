@@ -24,12 +24,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
 # 添加可执行文件
-add_executable(game_client 
+add_executable(game_client
     src/main.cpp
     src/game_client/game_client.cpp
+    src/thread_pool/thread_pool.cpp
+    src/curl_pool/curl_pool.cpp
 )
 
 # 链接curl库
 target_link_libraries(game_client PRIVATE ${CURL_LIBRARY}
-    pthread  # 添加pthread库，因为我们使用了std::thread
-) 
+    pthread # 添加pthread库，因为我们使用了std::thread
+)

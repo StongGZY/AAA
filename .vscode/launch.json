@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/game_client",
-            "coreDumpPath": "${workspaceFolder}/bin/game_client.29274.1745638856.coredump",
+            "coreDumpPath": "${workspaceFolder}/bin/game_client.16810.1745646789.coredump",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

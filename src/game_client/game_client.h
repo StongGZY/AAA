@@ -25,25 +25,25 @@ public:
     ~GameClient();
 
     // 初始化CURL
-    ErrorCode initialize();
+    ErrorCode Initialize();
     // 获取一个样本值，使用输出参数
-    ErrorCode getSample(double &value);
+    ErrorCode GetSample(double &value);
     // 提交猜测值，使用输出参数
-    ErrorCode submitGuess(double guess, std::string &response);
+    ErrorCode SubmitGuess(double guess, std::string &response);
     // 运行游戏主循环
-    void run();
+    void Run();
 
 private:
-    static size_t writeCallback(void *contents, size_t size, size_t nmemb, std::string *userp);
+    static size_t WriteCallback(void *contents, size_t size, size_t nmemb, std::string *userp);
     // 计算当前样本的均值
-    double calculateGuess(const std::vector<double> &samples);
+    double CalculateGuess(const std::vector<double> &samples);
 
 private:
-    CURL *m_curl;
-    std::string m_host;
-    int m_port;
-    std::string m_baseUrl;
-    std::string m_submitUrl;
+    CURL *curl_;
+    std::string host_;
+    int port_;
+    std::string base_url_;
+    std::string submit_url_;
 };
 
 #endif // GAME_CLIENT_H

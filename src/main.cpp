@@ -11,12 +11,12 @@ int main(int argc, char *argv[])
     }
 
     GameClient client(argv[1], std::atoi(argv[2]));
-    if (client.initialize() != GameClient::SUCCESS)
+    if (client.Initialize() != GameClient::SUCCESS)
     {
         std::cerr << "Failed to initialize CURL" << std::endl;
         return 1;
     }
 
-    client.run();
+    client.Run();
     return 0;
 }

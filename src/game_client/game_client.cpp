@@ -1,7 +1,7 @@
 #include "game_client/game_client.h"
 #include <sstream>
 
-size_t GameClient::writeCallback(void *contents, size_t size, size_t nmemb, std::string *userp)
+size_t GameClient::WriteCallback(void *contents, size_t size, size_t nmemb, std::string *userp)
 {
     size_t totalSize = size * nmemb;
     userp->append(static_cast<const char *>(contents), totalSize);
@@ -9,44 +9,50 @@ size_t GameClient::writeCallback(void *contents, size_t size, size_t nmemb, std:
 }
 
 GameClient::GameClient(const std::string &host, int port)
-    : m_host(host), m_port(port), m_curl(nullptr)
+    : host_(host), port_(port), curl_(nullptr)
 {
     std::stringstream ss;
     ss << "http://" << host << ":" << port;
-    m_baseUrl = ss.str();
-    m_submitUrl = m_baseUrl + "/submit";
+    base_url_ = ss.str();
+    submit_url_ = base_url_ + "/submit";
 }
 
 GameClient::~GameClient()
 {
-    if (m_curl)
+    if (curl_)
     {
-        curl_easy_cleanup(m_curl);
+        curl_easy_cleanup(curl_);
         curl_global_cleanup();
     }
 }
 
-GameClient::ErrorCode GameClient::initialize()
+GameClient::ErrorCode GameClient::Initialize()
 {
     curl_global_init(CURL_GLOBAL_ALL);
-    m_curl = curl_easy_init();
-    return m_curl ? SUCCESS : CURL_INIT_FAILED;
+    curl_ = curl_easy_init();
+    return curl_ ? SUCCESS : CURL_INIT_FAILED;
 }
 
-GameClient::ErrorCode GameClient::getSample(double &value)
+GameClient::ErrorCode GameClient::GetSample(double &value)
 {
+    auto start_time = std::chrono::system_clock::now();
+
     std::string response;
 
-    curl_easy_setopt(m_curl, CURLOPT_URL, m_baseUrl.c_str());
-    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl_, CURLOPT_URL, base_url_.c_str());
+    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response);
 
-    CURLcode res = curl_easy_perform(m_curl);
+    CURLcode res = curl_easy_perform(curl_);
     if (res != CURLE_OK)
     {
         std::cerr << "Failed to get sample: " << curl_easy_strerror(res) << std::endl;
         return CURL_REQUEST_FAILED;
     }
+
+    auto end_time = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "Get sample time: " << duration.count() << "ms" << std::endl;
 
     try
     {
@@ -60,25 +66,31 @@ GameClient::ErrorCode GameClient::getSample(double &value)
     }
 }
 
-GameClient::ErrorCode GameClient::submitGuess(double guess, std::string &response)
+GameClient::ErrorCode GameClient::SubmitGuess(double guess, std::string &response)
 {
-    std::string url = m_submitUrl + "?guess=" + std::to_string(guess);
+    auto start_time = std::chrono::system_clock::now();
 
-    curl_easy_setopt(m_curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &response);
+    std::string url = submit_url_ + "?guess=" + std::to_string(guess);
 
-    CURLcode res = curl_easy_perform(m_curl);
+    curl_easy_setopt(curl_, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response);
+
+    CURLcode res = curl_easy_perform(curl_);
     if (res != CURLE_OK)
     {
         std::cerr << "Failed to submit guess: " << curl_easy_strerror(res) << std::endl;
         return CURL_REQUEST_FAILED;
     }
 
+    auto end_time = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "Submit guess time: " << duration.count() << "ms" << std::endl;
+
     return SUCCESS;
 }
 
-double GameClient::calculateGuess(const std::vector<double> &samples)
+double GameClient::CalculateGuess(const std::vector<double> &samples)
 {
     if (samples.empty())
         return 0.0;
@@ -91,47 +103,46 @@ double GameClient::calculateGuess(const std::vector<double> &samples)
     return sum / samples.size();
 }
 
-void GameClient::run()
+void GameClient::Run()
 {
     std::ofstream logFile("game_client.log");
-    const int SAMPLES_PER_GUESS = 5; // 每次猜测前获取的样本数
+    const int SAMPLES_PER_GUESS = 1; // 每次猜测前获取的样本数
 
     while (true)
     {
+        // 获取当前时间
+        auto start_time = std::chrono::system_clock::now();
+
         // 收集多个样本
         std::vector<double> samples;
-        bool hasSampleError = false;
 
         for (int i = 0; i < SAMPLES_PER_GUESS; ++i)
         {
             double sample;
-            ErrorCode err = getSample(sample);
+            ErrorCode err = GetSample(sample);
             if (err != SUCCESS)
             {
-                hasSampleError = true;
-                break;
+                continue;
             }
             samples.push_back(sample);
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        }
-
-        if (hasSampleError)
-        {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            continue;
         }
 
         // 计算猜测值
-        double guess = calculateGuess(samples);
+        double guess = CalculateGuess(samples);
 
         // 提交猜测并记录结果
         std::string result;
-        ErrorCode err = submitGuess(guess, result);
+        ErrorCode err = SubmitGuess(guess, result);
         if (err == SUCCESS)
         {
             logFile << result << std::endl;
             logFile.flush();
         }
+
+        // 计算猜测时间
+        auto end_time = std::chrono::system_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        std::cout << "Guess time: " << duration.count() << "ms" << std::endl;
 
         // 等待以满足提交间隔要求
         std::this_thread::sleep_for(std::chrono::milliseconds(900));
